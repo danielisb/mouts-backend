@@ -1,77 +1,104 @@
-# Developer Evaluation Project
+# API de vendas
 
-`READ CAREFULLY`
+API em .NET 8 com PostgreSQL, EF Core, MediatR, AutoMapper e FluentValidation.
+Implementa CRUD de vendas, cancelamento, descontos por produto, filtros, paginação,
+ordenação e logs. Users e Auth foram preservados do template.
 
-## Use Case
-**You are a developer on the DeveloperStore team. Now we need to implement the API prototypes.**
+[Enunciado original](.doc/challenge.md) · [Documentação do template](.doc/overview.md)
 
-As we work with `DDD`, to reference entities from other domains, we use the `External Identities` pattern with denormalization of entity descriptions.
+## Executar
 
-Therefore, you will write an API (complete CRUD) that handles sales records. The API needs to be able to inform:
+Requisitos: SDK e runtime .NET 8, Docker com Compose e portas 5432 e 5119 disponíveis.
 
-* Sale number
-* Date when the sale was made
-* Customer
-* Total sale amount
-* Branch where the sale was made
-* Products
-* Quantities
-* Unit prices
-* Discounts
-* Total amount for each item
-* Cancelled/Not Cancelled
+Na raiz do repositório:
 
-It's not mandatory, but it would be a differential to build code for publishing events of:
-* SaleCreated
-* SaleModified
-* SaleCancelled
-* ItemCancelled
+```bash
+dotnet tool restore
+dotnet restore template/backend/src/Ambev.DeveloperEvaluation.WebApi/Ambev.DeveloperEvaluation.WebApi.csproj
 
-If you write the code, **it's not required** to actually publish to any Message Broker. You can log a message in the application log or however you find most convenient.
+cd template/backend
+docker compose up -d ambev.developerevaluation.database
+docker compose ps
+```
 
-### Business Rules
+Aguarde o banco ficar `healthy`. A conexão está em
+`template/backend/src/Ambev.DeveloperEvaluation.WebApi/appsettings.json`:
+banco `developer_evaluation`, usuário `developer` e senha
+`local_development_password`, usados somente no ambiente local.
+Para sobrescrever a conexão, configure `ConnectionStrings__DefaultConnection`
+antes das migrations e da execução da API.
 
-* Purchases above 4 identical items have a 10% discount
-* Purchases between 10 and 20 identical items have a 20% discount
-* It's not possible to sell above 20 identical items
-* Purchases below 4 items cannot have a discount
+Ainda em `template/backend`, aplique as migrations e inicie a API:
 
-These business rules define quantity-based discounting tiers and limitations:
+```bash
+cd src/Ambev.DeveloperEvaluation.WebApi
+dotnet ef database update --project ../Ambev.DeveloperEvaluation.ORM --startup-project .
+dotnet run --launch-profile http
+```
 
-1. Discount Tiers:
-   - 4+ items: 10% discount
-   - 10-20 items: 20% discount
+A factory de migrations lê as configurações da pasta atual, por isso execute
+o comando dentro da WebApi.
 
-2. Restrictions:
-   - Maximum limit: 20 items per product
-   - No discounts allowed for quantities below 4 items
+Abra o [Swagger](http://localhost:5119/swagger) para consultar os contratos e
+testar os endpoints. As rotas de vendas não exigem autenticação neste protótipo.
 
-## Overview
-This section provides a high-level overview of the project and the various skills and competencies it aims to assess for developer candidates. 
+## Testes
 
-See [Overview](/.doc/overview.md)
+Na raiz do repositório:
 
-## Tech Stack
-This section lists the key technologies used in the project, including the backend, testing, frontend, and database components. 
+```bash
+dotnet test template/backend/tests/Ambev.DeveloperEvaluation.Unit/Ambev.DeveloperEvaluation.Unit.csproj
+```
 
-See [Tech Stack](/.doc/tech-stack.md)
+Testes com xUnit, Bogus e NSubstitute cobrem descontos, limites, arredondamento,
+atualização, cancelamento e criação de vendas. Não precisam do banco em execução.
 
-## Frameworks
-This section outlines the frameworks and libraries that are leveraged in the project to enhance development productivity and maintainability. 
+## Endpoints
 
-See [Frameworks](/.doc/frameworks.md)
+| Método | Rota | Operação |
+|---|---|---|
+| POST | `/api/sales` | Criar |
+| GET | `/api/sales` | Listar |
+| GET | `/api/sales/{id}` | Consultar |
+| PUT | `/api/sales/{id}` | Atualizar |
+| PATCH | `/api/sales/{id}/cancel` | Cancelar |
+| DELETE | `/api/sales/{id}` | Excluir |
 
-<!-- 
-## API Structure
-This section includes links to the detailed documentation for the different API resources:
-- [API General](./docs/general-api.md)
-- [Products API](/.doc/products-api.md)
-- [Carts API](/.doc/carts-api.md)
-- [Users API](/.doc/users-api.md)
-- [Auth API](/.doc/auth-api.md)
--->
+Use o identificador retornado pelo POST nas demais operações.
+Erros usam `type`, `error` e `detail`, com status 400 para dados inválidos,
+404 para venda inexistente, 409 para conflito e 500 para falha inesperada.
 
-## Project Structure
-This section describes the overall structure and organization of the project files and directories. 
+## Regras e decisões
 
-See [Project Structure](/.doc/project-structure.md)
+- De 1 a 3 unidades: sem desconto; de 4 a 9: 10%; de 10 a 20: 20%.
+  Foi seguida a indicação “4+” do enunciado para quatro unidades.
+- Quantidades fora de 1 a 20 e produtos repetidos na mesma venda são rejeitados.
+- Preço positivo, com até duas casas decimais e limite de 1000000000.
+- Descontos e totais são calculados pela aplicação usando `decimal`.
+  `discount` é o valor monetário; o arredondamento usa duas casas e `AwayFromZero`.
+- Número da venda único e data em UTC, com sufixo `Z`.
+- Cliente, filial e produto são armazenados com identificador externo e nome.
+- O PUT substitui os dados editáveis e os itens, recalculando os totais.
+- Cancelar preserva os valores históricos e bloqueia atualizações. Excluir remove
+  a venda e seus itens.
+
+## Listagem
+
+- `_page`: padrão 1; `_size`: padrão 10, máximo 100.
+- `_order`: padrão `saleDate desc`. Aceita `saleNumber`, `saleDate`,
+  `customerName` e `totalAmount`, com `asc` ou `desc`, separados por vírgula.
+- Filtros: `saleNumber`, `customerName`, `customerId`, `branchId`,
+  `isCancelled`, `_minTotalAmount`, `_maxTotalAmount`,
+  `_minSaleDate` e `_maxSaleDate`.
+- Filtros textuais aceitam `*` e diferenciam maiúsculas de minúsculas.
+  Filtros distintos são combinados com AND; cada parâmetro aceita um valor.
+- A resposta contém `data`, `totalItems`, `currentPage` e `totalPages`.
+
+Exemplo: `GET /api/sales?customerName=Cliente*&isCancelled=false&_minTotalAmount=700`.
+
+## Estrutura
+
+Dentro de `template/backend/src`: Domain contém entidades e contratos;
+Application organiza os casos de uso de vendas em pastas próprias; ORM contém
+persistência e migrations; WebApi contém controllers e middleware; IoC registra
+as dependências. Os testes ficam em `template/backend/tests`.
