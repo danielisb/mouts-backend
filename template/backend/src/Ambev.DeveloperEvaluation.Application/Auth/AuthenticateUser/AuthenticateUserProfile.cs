@@ -13,7 +13,7 @@ public sealed class AuthenticateUserProfile : Profile
     /// </summary>
     public AuthenticateUserProfile()
     {
-        CreateMap<User, AuthenticateUserResult>()
+        CreateMap<User, AuthenticateUserResult>().MaxDepth(32)
             .ForMember(dest => dest.Token, opt => opt.Ignore())
             .ForMember(dest => dest.Role, opt => opt.MapFrom(src => src.Role.ToString()));
     }

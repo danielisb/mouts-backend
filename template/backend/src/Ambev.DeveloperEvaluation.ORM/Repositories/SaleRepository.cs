@@ -42,28 +42,30 @@ public class SaleRepository : ISaleRepository
     {
         var query = _context.Sales.AsNoTracking().AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(filter.SaleNumber))
+        var numbers = filter.SaleNumber.Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(ToLikePattern).ToArray();
+        if (numbers.Length > 0)
         {
-            var pattern = ToLikePattern(filter.SaleNumber);
             query = query.Where(sale =>
-                EF.Functions.Like(sale.SaleNumber, pattern, "\\"));
+                numbers.Any(pattern => EF.Functions.Like(sale.SaleNumber, pattern, "\\")));
         }
 
-        if (!string.IsNullOrWhiteSpace(filter.CustomerName))
+        var customers = filter.CustomerName.Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(ToLikePattern).ToArray();
+        if (customers.Length > 0)
         {
-            var pattern = ToLikePattern(filter.CustomerName);
             query = query.Where(sale =>
-                EF.Functions.Like(sale.CustomerName, pattern, "\\"));
+                customers.Any(pattern => EF.Functions.Like(sale.CustomerName, pattern, "\\")));
         }
 
-        if (filter.CustomerId.HasValue)
-            query = query.Where(sale => sale.CustomerId == filter.CustomerId.Value);
+        if (filter.CustomerId.Length > 0)
+            query = query.Where(sale => filter.CustomerId.Contains(sale.CustomerId));
 
-        if (filter.BranchId.HasValue)
-            query = query.Where(sale => sale.BranchId == filter.BranchId.Value);
+        if (filter.BranchId.Length > 0)
+            query = query.Where(sale => filter.BranchId.Contains(sale.BranchId));
 
-        if (filter.IsCancelled.HasValue)
-            query = query.Where(sale => sale.IsCancelled == filter.IsCancelled.Value);
+        if (filter.IsCancelled.Length > 0)
+            query = query.Where(sale => filter.IsCancelled.Contains(sale.IsCancelled));
 
         if (filter.MinTotalAmount.HasValue)
             query = query.Where(sale => sale.TotalAmount >= filter.MinTotalAmount.Value);

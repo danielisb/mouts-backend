@@ -7,7 +7,7 @@ public class SalesProfile : Profile
 {
     public SalesProfile()
     {
-        CreateMap<Sale, SaleResult>();
-        CreateMap<SaleItem, SaleItemResult>();
+        CreateMap<Sale, SaleResult>().MaxDepth(32);
+        CreateMap<SaleItem, SaleItemResult>().MaxDepth(32);
     }
 }

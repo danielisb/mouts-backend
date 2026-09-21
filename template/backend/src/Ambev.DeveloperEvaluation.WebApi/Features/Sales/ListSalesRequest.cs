@@ -14,11 +14,11 @@ public class ListSalesRequest
     [FromQuery(Name = "_order")]
     public string Order { get; set; } = "saleDate desc";
 
-    public string? SaleNumber { get; set; }
-    public string? CustomerName { get; set; }
-    public Guid? CustomerId { get; set; }
-    public Guid? BranchId { get; set; }
-    public bool? IsCancelled { get; set; }
+    public string[] SaleNumber { get; set; } = [];
+    public string[] CustomerName { get; set; } = [];
+    public Guid[] CustomerId { get; set; } = [];
+    public Guid[] BranchId { get; set; } = [];
+    public bool[] IsCancelled { get; set; } = [];
 
     [FromQuery(Name = "_minTotalAmount")]
     public decimal? MinTotalAmount { get; set; }

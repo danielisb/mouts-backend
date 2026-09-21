@@ -25,22 +25,22 @@ public class Program
             builder.AddDefaultLogging();
 
             builder.Services.AddControllers()
-                            .ConfigureApiBehaviorOptions(options =>
-                            {
-                                options.InvalidModelStateResponseFactory = context =>
-                                {
-                                    var detail = string.Join(" ", context.ModelState
-                                        .Where(entry => entry.Value?.Errors.Count > 0)
-                                        .Select(entry => $"Invalid value for {entry.Key}."));
+                .ConfigureApiBehaviorOptions(options =>
+                {
+                    options.InvalidModelStateResponseFactory = context =>
+                    {
+                        var detail = string.Join(" ", context.ModelState
+                            .Where(entry => entry.Value?.Errors.Count > 0)
+                            .Select(entry => $"Invalid value for {entry.Key}."));
 
-                                    return new BadRequestObjectResult(new
-                                    {
-                                        type = "ValidationError",
-                                        error = "Invalid input data",
-                                        detail
-                                    });
-                                };
-                            });
+                        return new BadRequestObjectResult(new
+                        {
+                            type = "ValidationError",
+                            error = "Invalid input data",
+                            detail
+                        });
+                    };
+                });
             builder.Services.AddEndpointsApiExplorer();
 
             builder.AddBasicHealthChecks();
@@ -80,9 +80,9 @@ public class Program
             }
 
             if (!app.Environment.IsDevelopment())
-{
-            app.UseHttpsRedirection();
-}
+            {
+                app.UseHttpsRedirection();
+            }
 
             app.UseAuthentication();
             app.UseAuthorization();

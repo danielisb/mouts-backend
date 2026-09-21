@@ -53,6 +53,17 @@ dotnet test template/backend/tests/Ambev.DeveloperEvaluation.Unit/Ambev.Develope
 Testes com xUnit, Bogus e NSubstitute cobrem descontos, limites, arredondamento,
 atualização, cancelamento e criação de vendas. Não precisam do banco em execução.
 
+Com o PostgreSQL em execução, rode também os testes de integração HTTP:
+
+```bash
+dotnet test template/backend/tests/Ambev.DeveloperEvaluation.Integration/Ambev.DeveloperEvaluation.Integration.csproj
+```
+
+Eles aplicam as migrations em um banco temporário e o removem ao terminar.
+Usam a conexão local acima; para outra instância, configure `SALES_TEST_CONNECTION`
+com um usuário autorizado a criar bancos. Cobrem CRUD, filtros, paginação,
+descontos, cancelamento e respostas de erro.
+
 ## Endpoints
 
 | Método | Rota | Operação |
@@ -91,7 +102,8 @@ Erros usam `type`, `error` e `detail`, com status 400 para dados inválidos,
   `isCancelled`, `_minTotalAmount`, `_maxTotalAmount`,
   `_minSaleDate` e `_maxSaleDate`.
 - Filtros textuais aceitam `*` e diferenciam maiúsculas de minúsculas.
-  Filtros distintos são combinados com AND; cada parâmetro aceita um valor.
+  Filtros distintos são combinados com AND. Repetições de `saleNumber`,
+  `customerName`, `customerId`, `branchId` e `isCancelled` usam OR.
 - A resposta contém `data`, `totalItems`, `currentPage` e `totalPages`.
 
 Exemplo: `GET /api/sales?customerName=Cliente*&isCancelled=false&_minTotalAmount=700`.
@@ -102,3 +114,11 @@ Dentro de `template/backend/src`: Domain contém entidades e contratos;
 Application organiza os casos de uso de vendas em pastas próprias; ORM contém
 persistência e migrations; WebApi contém controllers e middleware; IoC registra
 as dependências. Os testes ficam em `template/backend/tests`.
+
+## Dependência do template
+
+O AutoMapper 13.0.1 foi mantido. Todos os mapeamentos usam `MaxDepth(32)` como
+mitigação da [vulnerabilidade de recursão](https://github.com/advisories/GHSA-rvv3-g6hj-g44x).
+Isso não equivale à atualização corrigida: o aviso NU1903 permanece visível.
+A atualização para uma versão corrigida (15.1.1 na série 15 ou 16.1.1 na série 16)
+exige avaliar também a licença aplicável.

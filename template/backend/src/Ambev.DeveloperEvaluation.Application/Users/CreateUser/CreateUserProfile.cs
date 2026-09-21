@@ -13,7 +13,7 @@ public class CreateUserProfile : Profile
     /// </summary>
     public CreateUserProfile()
     {
-        CreateMap<CreateUserCommand, User>();
-        CreateMap<User, CreateUserResult>();
+        CreateMap<CreateUserCommand, User>().MaxDepth(32);
+        CreateMap<User, CreateUserResult>().MaxDepth(32);
     }
 }

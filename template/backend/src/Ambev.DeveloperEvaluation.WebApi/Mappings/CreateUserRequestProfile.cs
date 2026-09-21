@@ -8,6 +8,6 @@ public class CreateUserRequestProfile : Profile
 {
     public CreateUserRequestProfile()
     {
-        CreateMap<CreateUserRequest, CreateUserCommand>();
+        CreateMap<CreateUserRequest, CreateUserCommand>().MaxDepth(32);
     }
 }
