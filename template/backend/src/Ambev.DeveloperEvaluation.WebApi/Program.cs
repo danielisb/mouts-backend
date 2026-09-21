@@ -9,6 +9,7 @@ using Ambev.DeveloperEvaluation.WebApi.Middleware;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Ambev.DeveloperEvaluation.WebApi;
 
@@ -23,7 +24,23 @@ public class Program
             WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
             builder.AddDefaultLogging();
 
-            builder.Services.AddControllers();
+            builder.Services.AddControllers()
+                            .ConfigureApiBehaviorOptions(options =>
+                            {
+                                options.InvalidModelStateResponseFactory = context =>
+                                {
+                                    var detail = string.Join(" ", context.ModelState
+                                        .Where(entry => entry.Value?.Errors.Count > 0)
+                                        .Select(entry => $"Invalid value for {entry.Key}."));
+
+                                    return new BadRequestObjectResult(new
+                                    {
+                                        type = "ValidationError",
+                                        error = "Invalid input data",
+                                        detail
+                                    });
+                                };
+                            });
             builder.Services.AddEndpointsApiExplorer();
 
             builder.AddBasicHealthChecks();
@@ -54,6 +71,7 @@ public class Program
 
             var app = builder.Build();
             app.UseMiddleware<ValidationExceptionMiddleware>();
+            app.UseMiddleware<SalesExceptionMiddleware>();
 
             if (app.Environment.IsDevelopment())
             {
@@ -61,7 +79,10 @@ public class Program
                 app.UseSwaggerUI();
             }
 
+            if (!app.Environment.IsDevelopment())
+{
             app.UseHttpsRedirection();
+}
 
             app.UseAuthentication();
             app.UseAuthorization();
